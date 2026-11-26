@@ -1,1 +1,110 @@
-
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SMART TRADING ANALYSER</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0b1424;color:#eef5ff;font-family:Arial,sans-serif;padding:16px}
+header{padding:20px;background:#142640;border-radius:14px}
+h1{color:#39d6a1;font-size:23px;margin:0 0 8px}
+small{color:#a8bbd0}
+.card{background:#172b46;border:1px solid #304968;border-radius:13px;padding:16px;margin:14px 0}
+h2{font-size:17px;color:#83baff}
+label{display:block;margin:12px 0 5px;font-size:13px;color:#bdcde0}
+input,select{width:100%;padding:13px;background:#0c1a2d;color:white;border:1px solid #425a78;border-radius:8px;font-size:15px}
+button{width:100%;padding:14px;background:#16a879;color:white;border:0;border-radius:9px;font-weight:bold;margin-top:14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.metric{background:#0c1a2d;padding:12px;border-radius:9px}
+.metric small{display:block;margin-bottom:7px}
+.metric strong{font-size:18px}
+.signal{text-align:center;font-size:30px;font-weight:bold;padding:20px}
+table{width:100%;font-size:14px}
+td{padding:10px 4px;border-bottom:1px solid #304968}
+.note{font-size:12px;line-height:1.6;color:#a8bbd0}
+</style>
+</head>
+<body>
+<header>
+<h1>SMART TRADING ANALYSER</h1>
+<small>BURSA MALAYSIA | US STOCKS</small>
+</header>
+<div class="card">
+<h2>01. Tetapan Saham</h2>
+<label>Pasaran</label>
+<select id="market"><option>Bursa Malaysia</option><option>US Market</option></select>
+<label>Nama saham / Ticker</label>
+<input id="ticker" placeholder="Contoh: NVDA / 5223">
+<label>Timeframe</label>
+<select id="tf"><option>5 minit</option><option>15 minit</option><option>30 minit</option><option>1 jam</option><option>4 jam</option><option>1 hari</option></select>
+<label>Harga semasa</label><input id="price" type="number" step="any" placeholder="Masukkan harga">
+<label>EMA 9</label><input id="ema9" type="number" step="any" placeholder="Nilai EMA 9">
+<label>EMA 21</label><input id="ema21" type="number" step="any" placeholder="Nilai EMA 21">
+<label>RSI 14</label><input id="rsi" type="number" step="any" placeholder="Nilai RSI 0-100">
+<label>ATR 14</label><input id="atr" type="number" step="any" placeholder="Nilai ATR (pilihan)">
+<label>Modal (RM)</label><input id="capital" type="number" value="500">
+<label>Risiko setiap trade (%)</label><input id="risk" type="number" value="1" min="0.1" max="5" step="0.1">
+<button onclick="analyse()">ANALYSE BUY / SELL</button>
+</div>
+<div class="card">
+<h2>02. Keputusan Analisis</h2>
+<div class="signal" id="signal">WAIT</div>
+<p id="reason" class="note">Masukkan data saham untuk analisis.</p>
+<div class="grid">
+<div class="metric"><small>Signal Score</small><strong id="score">--</strong></div>
+<div class="metric"><small>Harga</small><strong id="last">--</strong></div>
+<div class="metric"><small>EMA 9</small><strong id="e9">--</strong></div>
+<div class="metric"><small>EMA 21</small><strong id="e21">--</strong></div>
+<div class="metric"><small>RSI 14</small><strong id="rv">--</strong></div>
+<div class="metric"><small>Trend</small><strong id="trend">--</strong></div>
+</div>
+</div>
+<div class="card">
+<h2>03. Entry & Risk Management</h2>
+<table>
+<tr><td>Entry</td><td id="entry">--</td></tr>
+<tr><td>Stop Loss</td><td id="sl">--</td></tr>
+<tr><td>Take Profit 1</td><td id="tp1">--</td></tr>
+<tr><td>Take Profit 2</td><td id="tp2">--</td></tr>
+<tr><td>Anggaran kuantiti</td><td id="qty">--</td></tr>
+<tr><td>Supertrend anggaran</td><td id="st">--</td></tr>
+</table>
+<p class="note">Supertrend dianggarkan menggunakan ATR yang dimasukkan. Isyarat ini berdasarkan input manual, bukan harga live. Semak data dan kos transaksi sebelum berdagang.</p>
+</div>
+<div class="card">
+<h2>04. Panduan Signal</h2>
+<p class="note">BUY: skor 70 ke atas. SELL: skor 30 ke bawah. WAIT: indikator bercampur. Skor ini ialah sistem saringan ringkas, bukan jaminan keuntungan.</p>
+</div>
+<script>
+function analyse(){
+const v=id=>Number(document.getElementById(id).value);
+let p=v('price'),a=v('ema9'),b=v('ema21'),r=v('rsi'),atr=v('atr')||p*.01;
+let cap=v('capital'),risk=v('risk');
+if(!p||!a||!b||!Number.isFinite(r)||r<0||r>100||!cap||risk<=0){alert('Sila isi harga, EMA, RSI, modal dan risiko dengan betul.');return;}
+let score=(a>b?40:0)+(r>50&&r<70?30:r>=70?10:r>40?10:0)+(p>a?30:0);
+let sig=score>=70?'BUY':score<=30?'SELL':'WAIT';
+let sl=sig==='SELL'?p+1.5*atr:p-1.5*atr;
+let tp1=sig==='SELL'?p-1.5*atr:p+1.5*atr;
+let tp2=sig==='SELL'?p-3*atr:p+3*atr;
+let qty=Math.floor((cap*risk/100)/Math.max(Math.abs(p-sl),.000001));
+let f=n=>n.toFixed(4);
+document.getElementById('signal').textContent=sig;
+document.getElementById('signal').style.color=sig==='BUY'?'#39e6a5':sig==='SELL'?'#ff7785':'#ffd16d';
+document.getElementById('reason').textContent='Saham: '+(document.getElementById('ticker').value||'Belum dinamakan')+' | '+document.getElementById('market').value+' | '+document.getElementById('tf').value;
+document.getElementById('score').textContent=score+'/100';
+document.getElementById('last').textContent=f(p);
+document.getElementById('e9').textContent=f(a);
+document.getElementById('e21').textContent=f(b);
+document.getElementById('rv').textContent=f(r);
+document.getElementById('trend').textContent=a>b?'Bullish':'Bearish';
+document.getElementById('entry').textContent=f(p);
+document.getElementById('sl').textContent=f(sl);
+document.getElementById('tp1').textContent=f(tp1);
+document.getElementById('tp2').textContent=f(tp2);
+document.getElementById('qty').textContent=qty+' unit (anggaran)';
+document.getElementById('st').textContent=p>(p-3*atr)?'Semak arah dengan carta':'Semak arah dengan carta';
+}
+</script>
+</body>
+</html>
